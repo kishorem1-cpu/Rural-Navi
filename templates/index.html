@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rural Navi — Rural Address Identification and Navigation Platform</title>
+
+  <!-- Leaflet CSS & JS for Interactive Geospatial Mapping -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <!-- QR Code Library for Client-side Privacy-Preserving Token Rendering -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <!-- Application Stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+  <!-- OFFLINE STATUS BANNER -->
+  <div class="offline-banner" id="offlineBanner">
+    ⚡ <span data-i18n="offlineMsg">Offline Mode Active — Using cached village address directory</span>
+  </div>
+
+  <!-- TOP APPLICATION BAR -->
+  <header class="topbar">
+    <a href="/" class="brand">
+      <div class="brand-icon">📍</div>
+      <div>
+        <div class="brand-title">Rural Navi <span style="font-size:0.8rem; font-weight:400; opacity:0.85;">(ஊரக முகவரி)</span></div>
+        <div class="brand-sub" data-i18n="brandSub">Civic Address Identification &amp; Navigation Platform</div>
+      </div>
+    </a>
+    <div class="topbar-actions">
+      <button class="lang-btn" id="langToggleBtn" onclick="toggleLanguage()">தமிழ் / English</button>
+      <span class="role-badge" id="currentRoleBadge">Delivery Mode</span>
+      <a href="/" class="lang-btn" style="text-decoration:none;">📱 Kiosk</a>
+    </div>
+  </header>
+
+  <!-- STAKEHOLDER MODE TABS -->
+  <nav class="mode-nav" aria-label="Stakeholder Modes">
+    <button class="mode-tab active" data-mode="delivery" onclick="switchMode('delivery')">
+      <span>🚚</span> <span data-i18n="tabDelivery">Delivery Personnel</span>
+    </button>
+    <button class="mode-tab" data-mode="resident" onclick="switchMode('resident')">
+      <span>🏡</span> <span data-i18n="tabResident">Resident Self-Check</span>
+    </button>
+    <button class="mode-tab" data-mode="field" onclick="switchMode('field')">
+      <span>🏥</span> <span data-i18n="tabField">Healthcare &amp; Emergency</span>
+    </button>
+    <a href="/kiosk" class="mode-tab" style="text-decoration:none;">
+      <span>🖥</span> <span data-i18n="tabKiosk">Public Kiosk</span>
+    </a>
+  </nav>
+
+  <!-- MAIN 2-COLUMN CONTAINER: SIDEBAR + INTERACTIVE MAP -->
+  <div class="main-container">
+    
+    <!-- LEFT SIDEBAR: CONTROLS & RESULTS -->
+    <aside class="sidebar-panel">
+      
+      <!-- SEARCH CARD -->
+      <section class="card" aria-label="Address Search">
+        <h2 class="card-title">
+          <span data-i18n="searchTitle">Search Panchayat House</span>
+          <span style="font-size:0.8rem; color:var(--muted);" id="modeSubheading">Fast Turn-by-Turn Delivery</span>
+        </h2>
+        
+        <form class="search-form" onsubmit="event.preventDefault(); executeSearch();">
+          <div class="form-group" style="margin-bottom:8px;">
+            <label for="villageSelect" class="form-label" data-i18n="lblVillage">Select Village / Panchayat:</label>
+            <select id="villageSelect" class="select-village">
+              <option value="">All Villages (அனைத்து கிராமங்கள்)</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom:8px;">
+            <label for="houseInput" class="form-label" data-i18n="lblDoor">Panchayat Door / House Number:</label>
+            <div class="form-row">
+              <input type="text" id="houseInput" class="input-house" placeholder="Enter door / house number" autocomplete="off" required>
+              <button type="submit" class="btn-search" id="searchSubmitBtn">
+                <span>🔍</span> <span data-i18n="btnFind">Find</span>
+              </button>
+            </div>
+          </div>
+          <p class="search-hint" data-i18n="searchHint">Resolves official Panchayat door numbers directly to verified GPS coordinates.</p>
+        </form>
+      </section>
+
+      <!-- DYNAMIC STATUS & RESULTS FEED -->
+      <section id="resultsContainer" style="display:none;"></section>
+
+      <!-- ACTIVE NAVIGATION & BEARING CARD -->
+      <section class="card compass-card" id="activeTargetCard" style="display:none;">
+        <h3 class="card-title" style="justify-content:center; margin-bottom:6px;">
+          <span data-i18n="headingNavReady">Active Waypoint Guidance</span>
+        </h3>
+        <p class="compass-sub" id="activeHouseTitle">Door 3-82</p>
+
+        <div class="compass-dial">
+          <span class="compass-needle" id="compassNeedle">➤</span>
+        </div>
+        <div class="compass-heading" id="compassTurnText">Head toward destination</div>
+        <p class="compass-sub" id="compassBearingText">Bearing: --°</p>
+
+        <div style="display:flex; gap:8px; justify-content:center; margin-top:12px;">
+          <button class="btn-action btn-navigate" id="enableCompassBtn" onclick="toggleCompassSensor()">
+            <span>🧭</span> <span data-i18n="btnCompass">Enable Compass</span>
+          </button>
+          <button class="btn-action btn-navigate" style="background:#235A8A;" onclick="triggerArrivalVerification()">
+            <span>📍</span> <span data-i18n="btnArrival">Verify Arrival (GPS)</span>
+          </button>
+        </div>
+
+        <!-- ARRIVAL RADAR GAUGE -->
+        <div class="arrival-box" id="arrivalBox" style="display:none;">
+          <div style="display:flex; justify-content:space-between; font-size:0.85rem; font-weight:700;">
+            <span id="arrivalStatusTitle">Checking location...</span>
+            <span id="arrivalDistanceText">-- m</span>
+          </div>
+          <div class="radar-gauge-track">
+            <div class="radar-gauge-bar" id="radarGaugeBar"></div>
+          </div>
+          <p style="font-size:0.78rem; color:var(--muted);" id="arrivalSubText">Verifying your distance to the front door entrance.</p>
+        </div>
+      </section>
+
+    </aside>
+
+    <!-- RIGHT PANEL: INTERACTIVE LEAFLET GEOSPATIAL MAP -->
+    <main class="map-panel" id="mapPanel">
+      <div id="map"></div>
+    </main>
+
+  </div>
+
+  <!-- PRIVACY-PRESERVING QR MODAL -->
+  <div class="modal-overlay" id="qrModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title" data-i18n="qrModalTitle">Panchayat Smart Door QR Plate</h3>
+        <button class="btn-close" onclick="closeModal('qrModal')">&times;</button>
+      </div>
+      <div class="qr-modal-body">
+        <div class="qr-frame">
+          <div id="qrCanvas"></div>
+        </div>
+        <p style="font-weight:700; margin-bottom:4px;" id="qrHouseDisplay">Door 3-82</p>
+        <p class="qr-notice" data-i18n="qrNotice">
+          This QR code uses an opaque navigation token. It allows instant phone navigation without revealing personal resident identities or phone numbers.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- REPORT DELIVERY ISSUE / CORRECTION MODAL -->
+  <div class="modal-overlay" id="reportModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title" data-i18n="reportModalTitle">Report Address Issue or Correction</h3>
+        <button class="btn-close" onclick="closeModal('reportModal')">&times;</button>
+      </div>
+      <form onsubmit="event.preventDefault(); submitIssueReport();">
+        <input type="hidden" id="reportHouseId">
+        <div class="form-group">
+          <label class="form-label" data-i18n="lblIssueType">Issue Type:</label>
+          <select id="reportTypeSelect" class="form-select">
+            <option value="incorrect_location">Coordinates Off / Incorrect Gate Location</option>
+            <option value="missing_door_plate">House Number Missing on Exterior Wall</option>
+            <option value="unserviceable_road">Path Blocked / Narrow Cul-de-sac</option>
+            <option value="other">Other Administrative Discrepancy</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="lblDescription">Description / Observations:</label>
+          <textarea id="reportDescription" class="form-textarea" placeholder="Detail the landmark or reason for correction..." required></textarea>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" class="btn-action" style="background:#E0DDD5; color:var(--ink);" onclick="closeModal('reportModal')">Cancel</button>
+          <button type="submit" class="btn-action btn-navigate" data-i18n="btnSubmitReport">Submit for Review</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- APPLICATION LOGIC -->
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

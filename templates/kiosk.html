@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Rural Navi — Village Civic Navigation Kiosk</title>
+
+  <!-- Google Fonts for Modern Premium Civic Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600;800&display=swap" rel="stylesheet">
+
+  <!-- Local Leaflet Geospatial Map Library (Zero CDN dependency) -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='leaflet.css') }}">
+  <script src="{{ url_for('static', filename='leaflet.js') }}"></script>
+
+  <!-- Local QR Code Library (Zero CDN dependency) -->
+  <script src="{{ url_for('static', filename='qrcode.min.js') }}"></script>
+
+  <style>
+    :root {
+      /* Premium Civic Palette: Deep Slate Navy, Crisp Pure White, Rich Civic Emerald, Vibrant Cyan */
+      --bg-canvas: #0B132B;
+      --panel-bg: rgba(255, 255, 255, 0.96);
+      --card-bg: #FFFFFF;
+      --card-border: #E2E8F0;
+      
+      --brand-primary: #0F766E;        /* Deep rich teal / civic emerald */
+      --brand-primary-light: #CCFBF1;
+      --brand-accent: #2563EB;         /* Civic Blue */
+      --brand-accent-light: #EFF6FF;
+      --brand-gradient: linear-gradient(135deg, #0F766E 0%, #0369A1 100%);
+      
+      --ink-headline: #0F172A;
+      --ink-body: #334155;
+      --ink-subtle: #64748B;
+      --ink-light: #94A3B8;
+
+      --key-bg: #F8FAFC;
+      --key-border: #CBD5E1;
+      --key-shadow: #94A3B8;
+      
+      --glass-panel: rgba(255, 255, 255, 0.88);
+      --glass-border: rgba(255, 255, 255, 0.6);
+      
+      --radius-sm: 10px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+      --radius-pill: 9999px;
+
+      --shadow-sm: 0 2px 4px rgba(15, 23, 42, 0.04);
+      --shadow-card: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+      --shadow-kiosk: 0 20px 40px -15px rgba(15, 23, 42, 0.2);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: radial-gradient(circle at 15% 15%, #1E293B 0%, #0B132B 100%);
+      color: var(--ink-headline);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+      -webkit-user-select: none;
+      overflow-x: hidden;
+    }
+
+    /* TOP CIVIC APP BAR (Clean, modern glass effect) */
+    .kiosk-header {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      color: #FFFFFF;
+      padding: 14px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      z-index: 100;
+    }
+
+    .kiosk-branding {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .kiosk-emblem {
+      width: 44px;
+      height: 44px;
+      background: var(--brand-gradient);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      box-shadow: 0 4px 12px rgba(15, 118, 110, 0.35);
+    }
+
+    .kiosk-title {
+      font-size: 1.3rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      background: linear-gradient(90deg, #FFFFFF, #93C5FD);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .kiosk-subtitle {
+      font-size: 0.82rem;
+      color: #94A3B8;
+      font-weight: 500;
+    }
+
+    .kiosk-header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .civic-badge {
+      background: rgba(255, 255, 255, 0.08);
+      color: #E2E8F0;
+      padding: 6px 14px;
+      border-radius: var(--radius-pill);
+      font-size: 0.82rem;
+      font-weight: 600;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .timer-badge {
+      background: rgba(37, 99, 235, 0.18);
+      color: #93C5FD;
+      border: 1px solid rgba(147, 197, 253, 0.3);
+    }
+
+    /* MAIN LANDSCAPE TABLET LAYOUT */
+    .kiosk-main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 460px 1fr;
+      gap: 22px;
+      padding: 22px 28px;
+      height: calc(100vh - 114px);
+      max-width: 1700px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    @media (max-width: 1024px) {
+      .kiosk-main {
+        grid-template-columns: 420px 1fr;
+        padding: 16px;
+        gap: 16px;
+      }
+    }
+
+    @media (max-width: 860px) {
+      .kiosk-main {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+    }
+
+    /* LEFT CONTROL PANEL (Modern Sleek Card) */
+    .control-panel {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: var(--shadow-kiosk);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      overflow-y: auto;
+    }
+
+    .panel-header-title {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--ink-subtle);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* VIRTUAL TOUCH DISPLAY (Ultra-Clean Digital Screen) */
+    .touch-display-container {
+      position: relative;
+      margin-bottom: 16px;
+    }
+
+    .touch-display {
+      background: #0F172A;
+      border: 2px solid #334155;
+      border-radius: var(--radius-md);
+      padding: 16px 20px;
+      min-height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 2.3rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: #38BDF8;
+      box-shadow: inset 0 3px 8px rgba(0,0,0,0.4), 0 4px 12px rgba(15, 23, 42, 0.1);
+      transition: all 0.2s ease;
+    }
+
+    .touch-display.empty {
+      color: #64748B;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 500;
+      letter-spacing: normal;
+    }
+
+    .touch-display.active-typing {
+      border-color: #38BDF8;
+      box-shadow: inset 0 3px 8px rgba(0,0,0,0.4), 0 0 15px rgba(56, 189, 248, 0.25);
+    }
+
+    /* ON-SCREEN TOUCHPAD (Large Ergonomic Tablet Keys) */
+    .touch-keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .k-btn {
+      background: #FFFFFF;
+      color: #0F172A;
+      border: 1px solid #CBD5E1;
+      border-radius: var(--radius-md);
+      padding: 18px 0;
+      font-size: 1.75rem;
+      font-weight: 700;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #CBD5E1, 0 6px 12px rgba(15, 23, 42, 0.05);
+      transition: all 0.08s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .k-btn:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #CBD5E1, 0 2px 4px rgba(15, 23, 42, 0.05);
+      background: #F1F5F9;
+    }
+
+    .k-btn.hyphen {
+      font-size: 2.2rem;
+      color: var(--brand-accent);
+      background: var(--brand-accent-light);
+      border-color: #BFDBFE;
+      box-shadow: 0 4px 0 #93C5FD;
+    }
+
+    .k-btn.hyphen:active {
+      box-shadow: 0 1px 0 #93C5FD;
+    }
+
+    .k-btn.clear-btn {
+      background: #FEF2F2;
+      color: #EF4444;
+      border-color: #FECACA;
+      font-size: 1.25rem;
+      font-weight: 800;
+      box-shadow: 0 4px 0 #FCA5A5;
+    }
+
+    .k-btn.clear-btn:active {
+      box-shadow: 0 1px 0 #FCA5A5;
+    }
+
+    .keypad-actions {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .action-sub-btn {
+      flex: 1;
+      padding: 14px;
+      border-radius: var(--radius-md);
+      font-size: 0.95rem;
+      font-weight: 700;
+      border: 1px solid #CBD5E1;
+      background: #F8FAFC;
+      color: var(--ink-body);
+      cursor: pointer;
+      box-shadow: 0 3px 0 #CBD5E1;
+      transition: all 0.08s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .action-sub-btn:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 #CBD5E1;
+    }
+
+    /* PRIMARY SEARCH / LOCATE BUTTON */
+    .btn-search-kiosk {
+      width: 100%;
+      background: var(--brand-gradient);
+      color: #FFFFFF;
+      border: none;
+      border-radius: var(--radius-md);
+      padding: 18px;
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #0D5C56, 0 10px 20px rgba(15, 118, 110, 0.25);
+      transition: all 0.1s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .btn-search-kiosk:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #0D5C56;
+    }
+
+    /* QUICK TEST CHIPS */
+    .demo-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+      align-items: center;
+    }
+
+    .demo-chip-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--ink-light);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .demo-chip {
+      background: #F1F5F9;
+      border: 1px solid #E2E8F0;
+      color: #334155;
+      border-radius: var(--radius-pill);
+      padding: 5px 12px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .demo-chip:hover, .demo-chip:active {
+      background: #E2E8F0;
+      color: #0F172A;
+    }
+
+    .demo-chip.test-notfound {
+      background: #FEF2F2;
+      color: #DC2626;
+      border-color: #FECACA;
+    }
+
+    /* RIGHT DISPLAY PANEL (Map & Live Info) */
+    .display-panel {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: var(--shadow-kiosk);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+    }
+
+    /* WELCOME IDLE STATE */
+    .state-welcome {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 40px;
+    }
+
+    .welcome-illustration {
+      width: 100px;
+      height: 100px;
+      background: linear-gradient(135deg, #EFF6FF, #CCFBF1);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.2);
+    }
+
+    .welcome-title {
+      font-size: 1.7rem;
+      font-weight: 800;
+      color: #0F172A;
+      letter-spacing: -0.02em;
+      margin-bottom: 10px;
+    }
+
+    .welcome-sub {
+      font-size: 1.05rem;
+      color: #64748B;
+      max-width: 500px;
+      line-height: 1.6;
+    }
+
+    /* ACTIVE FOUND STATE */
+    .state-result {
+      display: none;
+      height: 100%;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .result-summary-card {
+      background: #FFFFFF;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: 18px 22px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .res-house-badge {
+      font-size: 1.85rem;
+      font-weight: 800;
+      color: #0F172A;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      letter-spacing: -0.02em;
+    }
+
+    .res-pill {
+      font-size: 0.72rem;
+      font-weight: 700;
+      background: #DCFCE7;
+      color: #15803D;
+      border: 1px solid #BBF7D0;
+      padding: 3px 10px;
+      border-radius: var(--radius-pill);
+      text-transform: uppercase;
+    }
+
+    .res-location-sub {
+      font-size: 0.98rem;
+      font-weight: 600;
+      color: #475569;
+      margin-top: 3px;
+    }
+
+    .res-landmark {
+      font-size: 0.92rem;
+      color: #0F766E;
+      font-weight: 600;
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .qr-thumbnail-box {
+      text-align: center;
+      cursor: pointer;
+      background: #F8FAFC;
+      border: 2px dashed #94A3B8;
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      transition: all 0.2s ease;
+    }
+
+    .qr-thumbnail-box:hover {
+      transform: scale(1.03);
+      border-color: #0F766E;
+      background: #F0FDFA;
+    }
+
+    .qr-thumbnail-label {
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: #0F766E;
+      margin-top: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* INTERACTIVE MAP FRAME */
+    .map-frame {
+      flex: 1;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid var(--card-border);
+      position: relative;
+      box-shadow: var(--shadow-sm);
+      min-height: 280px;
+    }
+
+    #kioskMap {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* NOT FOUND STATE */
+    .state-not-found {
+      display: none;
+      height: 100%;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 40px;
+      background: #FFFFFF;
+      border-radius: var(--radius-md);
+      border: 1px solid #FECACA;
+    }
+
+    .nf-icon {
+      width: 80px;
+      height: 80px;
+      background: #FEE2E2;
+      color: #EF4444;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.4rem;
+      margin-bottom: 18px;
+    }
+
+    .nf-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #991B1B;
+      margin-bottom: 8px;
+    }
+
+    .nf-sub {
+      font-size: 1rem;
+      color: #64748B;
+      max-width: 460px;
+      line-height: 1.6;
+    }
+
+    /* SCREEN 5: ENLARGED QR FULLSCREEN MODAL */
+    .modal-enlarge {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 20px;
+    }
+
+    .modal-enlarge.open {
+      display: flex;
+    }
+
+    .enlarge-card {
+      background: #FFFFFF;
+      border-radius: var(--radius-lg);
+      padding: 36px 40px;
+      text-align: center;
+      max-width: 460px;
+      width: 100%;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      animation: popIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0.92); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .enlarge-house {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: #0F172A;
+      margin-bottom: 4px;
+    }
+
+    .enlarge-landmark {
+      font-size: 1rem;
+      color: #64748B;
+      margin-bottom: 22px;
+    }
+
+    .qr-large-frame {
+      display: inline-block;
+      padding: 16px;
+      background: #FFFFFF;
+      border: 2px dashed #CBD5E1;
+      border-radius: var(--radius-md);
+      margin-bottom: 18px;
+    }
+
+    .enlarge-note {
+      font-size: 0.92rem;
+      color: #0F766E;
+      font-weight: 600;
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+
+    .btn-dismiss {
+      background: var(--brand-gradient);
+      color: #FFFFFF;
+      border: none;
+      border-radius: var(--radius-md);
+      padding: 14px 36px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(15, 118, 110, 0.3);
+    }
+
+    /* FOOTER BAR */
+    .kiosk-footer {
+      background: rgba(15, 23, 42, 0.9);
+      padding: 10px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      color: #94A3B8;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- KIOSK HEADER BAR -->
+  <header class="kiosk-header">
+    <div class="kiosk-branding">
+      <div class="kiosk-emblem">📍</div>
+      <div>
+        <div class="kiosk-title">Rural Navi — ஊரக முகவரி வழிகாட்டி மையம்</div>
+        <div class="kiosk-subtitle">Panchayat Public Address &amp; Navigation Kiosk</div>
+      </div>
+    </div>
+    <div class="kiosk-header-right">
+      <span class="civic-badge">🏛 Alanganallur Block</span>
+      <span class="civic-badge timer-badge" id="sessionTimerDisplay">⏱ 60s</span>
+    </div>
+  </header>
+
+  <!-- MAIN TWO-COLUMN CONTENT -->
+  <main class="kiosk-main">
+
+    <!-- LEFT PANEL: ON-SCREEN KEYPAD & SEARCH -->
+    <section class="control-panel">
+      <div class="panel-header-title">
+        <span>Enter Panchayat House Number (கதவு எண்)</span>
+      </div>
+
+      <!-- VIRTUAL TOUCH DISPLAY (NO SOFT KEYBOARD POPUP) -->
+      <div class="touch-display-container">
+        <div class="touch-display empty" id="touchDisplay">
+          Tap keys below
+        </div>
+      </div>
+
+      <!-- TOUCH KEYPAD GRID (DIGITS, HYPHEN, BACKSPACE, CLEAR) -->
+      <div class="touch-keypad">
+        <button class="k-btn" onclick="pressKioskKey('1')">1</button>
+        <button class="k-btn" onclick="pressKioskKey('2')">2</button>
+        <button class="k-btn" onclick="pressKioskKey('3')">3</button>
+        <button class="k-btn" onclick="pressKioskKey('4')">4</button>
+        <button class="k-btn" onclick="pressKioskKey('5')">5</button>
+        <button class="k-btn" onclick="pressKioskKey('6')">6</button>
+        <button class="k-btn" onclick="pressKioskKey('7')">7</button>
+        <button class="k-btn" onclick="pressKioskKey('8')">8</button>
+        <button class="k-btn" onclick="pressKioskKey('9')">9</button>
+        <button class="k-btn clear-btn" onclick="clearKioskKeys()">C</button>
+        <button class="k-btn" onclick="pressKioskKey('0')">0</button>
+        <button class="k-btn hyphen" onclick="pressKioskKey('-')">-</button>
+      </div>
+
+      <div class="keypad-actions">
+        <button class="action-sub-btn" onclick="backspaceKioskKey()">⌫ Delete</button>
+        <button class="action-sub-btn" onclick="clearKioskKeys()">Reset Form</button>
+      </div>
+
+      <!-- SEARCH BUTTON -->
+      <button class="btn-search-kiosk" onclick="executeKioskLookup()">
+        <span>🔍</span> Locate Address (தேடு)
+      </button>
+
+      <!-- QUICK TEST CHIPS -->
+      <div class="demo-chips">
+        <span class="demo-chip-label">Quick Test:</span>
+        <button class="demo-chip" onclick="setSampleNo('3-82')">3-82</button>
+        <button class="demo-chip" onclick="setSampleNo('4-15')">4-15</button>
+        <button class="demo-chip" onclick="setSampleNo('2-07')">2-07</button>
+        <button class="demo-chip" onclick="setSampleNo('5-33')">5-33</button>
+        <button class="demo-chip" onclick="setSampleNo('9-126')">9-126</button>
+        <button class="demo-chip test-notfound" onclick="setSampleNo('9-99')">9-99 (Not Found)</button>
+      </div>
+    </section>
+
+    <!-- RIGHT PANEL: INTERACTIVE MAP & QR RESULTS -->
+    <section class="display-panel">
+      
+      <!-- 1. DEFAULT WELCOME STATE -->
+      <div class="state-welcome" id="stateWelcome">
+        <div class="welcome-illustration">🗺️</div>
+        <h2 class="welcome-title">Civic Touchscreen Address Finder</h2>
+        <p class="welcome-sub">
+          Enter an existing Panchayat house number on the keypad to view its verified GPS location, door landmarks, and scan the QR code for instant phone navigation.
+        </p>
+      </div>
+
+      <!-- 2. FOUND RESULT STATE: SUMMARY CARD + INTERACTIVE MAP -->
+      <div class="state-result" id="stateResult">
+        
+        <div class="result-summary-card">
+          <div>
+            <div class="res-house-badge">
+              <span id="resHouseNumber">Door 3-82</span>
+              <span class="res-pill" id="sampleDataTag">Verified</span>
+            </div>
+            <div class="res-location-sub" id="resVillageArea">Alanganallur Panchayat (Ward 1)</div>
+            <div class="res-landmark" id="resLandmarkText">
+              <span>📍</span> Opposite the water tank
+            </div>
+            <div style="margin-top:6px; font-size:0.8rem; color:#64748B;" id="resCoordsDisplay">
+              GPS: 9.4519° N, 77.5586° E
+            </div>
+          </div>
+
+          <!-- QR THUMBNAIL BOX (SCREEN 5 TRIGGER) -->
+          <div class="qr-thumbnail-box" onclick="openEnlargedQR()" title="Click to view enlarged QR">
+            <div id="thumbQrCanvas"></div>
+            <div class="qr-thumbnail-label">Tap to Enlarge</div>
+          </div>
+        </div>
+
+        <!-- EMBEDDED LEAFLET MAP -->
+        <div class="map-frame">
+          <div id="kioskMap"></div>
+        </div>
+
+      </div>
+
+      <!-- 3. NOT FOUND STATE -->
+      <div class="state-not-found" id="stateNotFound">
+        <div class="nf-icon">⚠</div>
+        <h3 class="nf-title">Address Not Found (முகவரி இல்லை)</h3>
+        <p class="nf-sub" id="nfMessageText">
+          No verified GPS record exists for house number <strong>"9-99"</strong> in the local Panchayat roll.
+        </p>
+        <p style="font-size:0.85rem; color:#64748B; margin-top:14px;">
+          Please consult the local Panchayat administration to have this property surveyed and assigned a verified coordinate waypoint.
+        </p>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- SCREEN 5: ENLARGED QR FULLSCREEN MODAL -->
+  <div class="modal-enlarge" id="modalEnlargeQR" onclick="closeEnlargedQR(event)">
+    <div class="enlarge-card" onclick="event.stopPropagation()">
+      <div class="enlarge-house" id="enlargeHouseTitle">Door 3-82</div>
+      <div class="enlarge-landmark" id="enlargeLandmarkSub">Opposite the water tank</div>
+
+      <div class="qr-large-frame">
+        <div id="largeQrCanvas"></div>
+      </div>
+
+      <p class="enlarge-note">
+        📱 Scan with any smartphone camera to immediately open turn-by-turn navigation in Google Maps
+      </p>
+
+      <button class="btn-dismiss" onclick="closeEnlargedQR()">Done (சரி)</button>
+    </div>
+  </div>
+
+  <!-- PRIVACY FOOTER -->
+  <footer class="kiosk-footer">
+    <span>🔒 Privacy Guard: Resident personal names and phone numbers are never displayed publicly.</span>
+    <span>Rural Navi Platform &bull; Civic Address Navigation System</span>
+  </footer>
+
+  <script>
+    // Kiosk Application State
+    let enteredHouseNo = "";
+    let sessionRemainingSeconds = 60;
+    let sessionInterval = null;
+    let currentRecord = null;
+    let kioskMapInstance = null;
+    let mapMarker = null;
+
+    // 1. TOUCH KEYPAD FUNCTIONS
+    function pressKioskKey(val) {
+      if (enteredHouseNo.length < 10) {
+        enteredHouseNo += val;
+        updateKioskDisplay();
+      }
+      resetSessionTimer();
+    }
+
+    function backspaceKioskKey() {
+      if (enteredHouseNo.length > 0) {
+        enteredHouseNo = enteredHouseNo.slice(0, -1);
+        updateKioskDisplay();
+      }
+      resetSessionTimer();
+    }
+
+    function clearKioskKeys() {
+      enteredHouseNo = "";
+      updateKioskDisplay();
+      showWelcomeState();
+      resetSessionTimer();
+    }
+
+    function updateKioskDisplay() {
+      const disp = document.getElementById("touchDisplay");
+      if (enteredHouseNo.length === 0) {
+        disp.textContent = "Tap keys below";
+        disp.classList.add("empty");
+        disp.classList.remove("active-typing");
+      } else {
+        disp.textContent = enteredHouseNo;
+        disp.classList.remove("empty");
+        disp.classList.add("active-typing");
+      }
+    }
+
+    function setSampleNo(no) {
+      enteredHouseNo = no;
+      updateKioskDisplay();
+      executeKioskLookup();
+      resetSessionTimer();
+    }
+
+    // 2. STATE CONTROLLERS
+    function showWelcomeState() {
+      document.getElementById("stateWelcome").style.display = "flex";
+      document.getElementById("stateResult").style.display = "none";
+      document.getElementById("stateNotFound").style.display = "none";
+      currentRecord = null;
+    }
+
+    function showResultState() {
+      document.getElementById("stateWelcome").style.display = "none";
+      document.getElementById("stateResult").style.display = "flex";
+      document.getElementById("stateNotFound").style.display = "none";
+    }
+
+    function showNotFoundState(query) {
+      document.getElementById("stateWelcome").style.display = "none";
+      document.getElementById("stateResult").style.display = "none";
+      document.getElementById("stateNotFound").style.display = "flex";
+      document.getElementById("nfMessageText").innerHTML = `No verified GPS record exists for house number <strong>"${query}"</strong> in the local Panchayat roll.`;
+    }
+
+    // 3. LOOKUP & MAP/QR WORKFLOW
+    async function executeKioskLookup() {
+      const raw = enteredHouseNo.trim();
+      if (!raw) return;
+
+      resetSessionTimer();
+
+      try {
+        const response = await fetch(`/api/search?q=${encodeURIComponent(raw)}`);
+        const data = await response.json();
+
+        if (data.success && data.count > 0) {
+          const item = data.results[0];
+          currentRecord = item;
+          renderKioskResult(item);
+        } else {
+          showNotFoundState(raw);
+        }
+      } catch (err) {
+        console.error("Lookup error:", err);
+        showNotFoundState(raw);
+      }
+    }
+
+    function renderKioskResult(item) {
+      showResultState();
+
+      document.getElementById("resHouseNumber").textContent = `Door ${item.house_no}`;
+      document.getElementById("resVillageArea").textContent = `${item.village_name} Panchayat (Ward ${item.ward_no})`;
+      document.getElementById("resLandmarkText").innerHTML = `<span>📍</span> ${item.landmark || 'No specific landmark recorded'}`;
+      document.getElementById("resCoordsDisplay").textContent = `GPS: ${item.lat.toFixed(5)}° N, ${item.lng.toFixed(5)}° E`;
+
+      // Direct universal Google Maps navigation URL
+      const mapsDestinationUrl = `https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lng}`;
+
+      // Render Thumbnail QR
+      const thumbCanvas = document.getElementById("thumbQrCanvas");
+      thumbCanvas.innerHTML = "";
+      new QRCode(thumbCanvas, {
+        text: mapsDestinationUrl,
+        width: 95,
+        height: 95,
+        colorDark: "#0F172A",
+        colorLight: "#FFFFFF",
+        correctLevel: QRCode.CorrectLevel.M
+      });
+
+      // Prepare Large Modal QR (Screen 5)
+      const largeCanvas = document.getElementById("largeQrCanvas");
+      largeCanvas.innerHTML = "";
+      new QRCode(largeCanvas, {
+        text: mapsDestinationUrl,
+        width: 240,
+        height: 240,
+        colorDark: "#0F172A",
+        colorLight: "#FFFFFF",
+        correctLevel: QRCode.CorrectLevel.M
+      });
+      document.getElementById("enlargeHouseTitle").textContent = `Door ${item.house_no} (${item.village_name})`;
+      document.getElementById("enlargeLandmarkSub").textContent = item.landmark || "";
+
+      // Initialize or Update Leaflet Map
+      initOrUpdateMap(item.lat, item.lng, item.house_no, item.landmark);
+    }
+
+    // 4. MAP RENDERING
+    function initOrUpdateMap(lat, lng, houseNo, landmark) {
+      if (!kioskMapInstance) {
+        kioskMapInstance = L.map("kioskMap", {
+          zoomControl: true,
+          attributionControl: true
+        }).setView([lat, lng], 17);
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19,
+          attribution: "&copy; OpenStreetMap contributors | Rural Navi"
+        }).addTo(kioskMapInstance);
+      } else {
+        kioskMapInstance.invalidateSize();
+        kioskMapInstance.setView([lat, lng], 17);
+      }
+
+      if (mapMarker) {
+        kioskMapInstance.removeLayer(mapMarker);
+      }
+
+      mapMarker = L.marker([lat, lng]).addTo(kioskMapInstance);
+      mapMarker.bindPopup(`
+        <div style="font-family:'Plus Jakarta Sans',sans-serif; text-align:center;">
+          <strong style="color:#0F172A; font-size:1.1rem;">Door ${houseNo}</strong><br>
+          <span style="color:#64748B; font-size:0.85rem;">${landmark}</span>
+        </div>
+      `).openPopup();
+
+      setTimeout(() => {
+        kioskMapInstance.invalidateSize();
+      }, 250);
+    }
+
+    // 5. ENLARGED QR MODAL (SCREEN 5)
+    function openEnlargedQR() {
+      if (!currentRecord) return;
+      document.getElementById("modalEnlargeQR").classList.add("open");
+      resetSessionTimer();
+    }
+
+    function closeEnlargedQR(e) {
+      if (e) e.stopPropagation();
+      document.getElementById("modalEnlargeQR").classList.remove("open");
+      resetSessionTimer();
+    }
+
+    // 6. PRIVACY AUTO-RESET COUNTDOWN TIMER (60 SECONDS)
+    function resetSessionTimer() {
+      sessionRemainingSeconds = 60;
+      updateTimerBadge();
+    }
+
+    function updateTimerBadge() {
+      const badge = document.getElementById("sessionTimerDisplay");
+      if (badge) {
+        badge.textContent = `⏱ ${sessionRemainingSeconds}s`;
+      }
+    }
+
+    function startSessionCountdown() {
+      if (sessionInterval) clearInterval(sessionInterval);
+      sessionInterval = setInterval(() => {
+        sessionRemainingSeconds--;
+        if (sessionRemainingSeconds <= 0) {
+          clearKioskKeys();
+          closeEnlargedQR();
+          sessionRemainingSeconds = 60;
+        }
+        updateTimerBadge();
+      }, 1000);
+    }
+
+    // Initialize on page load
+    window.addEventListener("DOMContentLoaded", () => {
+      startSessionCountdown();
+      updateTimerBadge();
+    });
+  </script>
+</body>
+</html>

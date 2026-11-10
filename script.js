@@ -1,3 +1,18 @@
+
+// Hybrid Local Cache Loader for Static GitHub Pages
+let localStaticData = null;
+async function preloadLocalData() {
+  try {
+    const res = await fetch('data.json');
+    if (res.ok) {
+      localStaticData = await res.json();
+      console.log('Loaded localStaticData:', localStaticData);
+    }
+  } catch(e) {
+    console.warn('Could not load data.json');
+  }
+}
+preloadLocalData();
 /**
  * Rural Navi — Frontend Engine
  * -----------------------------
@@ -182,7 +197,46 @@ async function executeSearch() {
     let url = `/api/search?q=${encodeURIComponent(rawQuery)}`;
     if (villageId) url += `&village_id=${encodeURIComponent(villageId)}`;
 
-    const res = await fetch(url);
+    let res = null;
+    try {
+      res = await fetch(url);
+    } catch(err) {
+      console.log('Backend not reachable, checking localStaticData...');
+    }
+    
+    if (!res || !res.ok) {
+      if (localStaticData && localStaticData.houses) {
+        const normQ = normalizeHouseNo(houseNo);
+        const filtered = localStaticData.houses.filter(h => {
+          const matchHouse = normalizeHouseNo(h.house_no) === normQ || normalizeHouseNo(h.normalized_no) === normQ;
+          const matchVil = !villageId || h.village_id == villageId;
+          return matchHouse && matchVil;
+        }).map(h => ({
+          id: h.id,
+          house_no: h.house_no,
+          normalized_no: h.normalized_no,
+          ward_no: h.ward_no,
+          lat: h.latitude,
+          lng: h.longitude,
+          landmark: h.landmark,
+          confidence_tier: h.confidence_tier,
+          confidence_score: h.confidence_score,
+          status: h.status,
+          village_name: h.village_name,
+          village_name_ta: h.village_name_ta,
+          nav_token: h.nav_token
+        }));
+        
+        renderResults({
+          success: true,
+          query: houseNo,
+          count: filtered.length,
+          results: filtered,
+          match_type: filtered.length > 0 ? 'EXACT' : 'NO_MATCH'
+        });
+        return;
+      }
+    }
     const data = await res.json();
 
     if (!data.success || data.count === 0) {

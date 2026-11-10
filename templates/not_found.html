@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Address Token Not Found — Rural Navi</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    body { display:flex; align-items:center; justify-content:center; min-height:100vh; text-align:center; }
+    .box { background:#fff; padding:36px; border-radius:12px; border:1px solid var(--line); max-width:440px; box-shadow:var(--shadow-md); }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <div style="font-size:3rem; margin-bottom:12px;">⚠</div>
+    <h2 style="color:var(--green-deep); margin-bottom:8px;">Address Waypoint Not Found</h2>
+    <p style="color:var(--muted); font-size:0.95rem; margin-bottom:20px;">
+      The scanned navigation token <code>{{ token }}</code> does not correspond to an active Panchayat doorway record. The property may have been updated or de-indexed.
+    </p>
+    <a href="/" class="btn-action btn-navigate" style="display:inline-block;">Go to Rural Navi Directory</a>
+  </div>
+</body>
+</html>

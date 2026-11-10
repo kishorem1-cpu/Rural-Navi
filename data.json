@@ -1,0 +1,147 @@
+{
+  "villages": [
+    {
+      "id": 1,
+      "name": "Alanganallur",
+      "name_ta": "அலங்காநல்லூர்",
+      "block": "Alanganallur Block",
+      "district": "Madurai"
+    },
+    {
+      "id": 2,
+      "name": "Vadipatti",
+      "name_ta": "வாடிப்பட்டி",
+      "block": "Vadipatti Block",
+      "district": "Madurai"
+    },
+    {
+      "id": 3,
+      "name": "Palamedu",
+      "name_ta": "பாலமேடு",
+      "block": "Alanganallur Block",
+      "district": "Madurai"
+    }
+  ],
+  "houses": [
+    {
+      "id": 1,
+      "house_no": "9-126",
+      "normalized_no": "9-126",
+      "ward_no": "1",
+      "latitude": 8.868731,
+      "longitude": 77.517977,
+      "landmark": "Near the Panchayat office, second lane",
+      "confidence_tier": "HIGH",
+      "confidence_score": 80,
+      "status": "verified",
+      "nav_token": "6XZM3vXugOQ",
+      "village_name": "Alanganallur",
+      "village_name_ta": "அலங்காநல்லூர்"
+    },
+    {
+      "id": 2,
+      "house_no": "3-82",
+      "normalized_no": "3-82",
+      "ward_no": "Ward 3",
+      "latitude": 12.8236,
+      "longitude": 80.0441,
+      "landmark": "Opposite Primary Health Centre",
+      "confidence_tier": "HIGH",
+      "confidence_score": 80,
+      "status": "verified",
+      "nav_token": "HuleruMiMFs",
+      "village_name": "Alanganallur",
+      "village_name_ta": "அலங்காநல்லூர்"
+    },
+    {
+      "id": 3,
+      "house_no": "4-15",
+      "normalized_no": "4-15",
+      "ward_no": "1",
+      "latitude": 9.4498,
+      "longitude": 77.5602,
+      "landmark": "Behind the primary school",
+      "confidence_tier": "HIGH",
+      "confidence_score": 80,
+      "status": "verified",
+      "nav_token": "yinr50BOF8A",
+      "village_name": "Alanganallur",
+      "village_name_ta": "அலங்காநல்லூர்"
+    },
+    {
+      "id": 4,
+      "house_no": "2-07",
+      "normalized_no": "2-7",
+      "ward_no": "1",
+      "latitude": 9.4531,
+      "longitude": 77.5561,
+      "landmark": "Third house from the temple corner",
+      "confidence_tier": "HIGH",
+      "confidence_score": 80,
+      "status": "verified",
+      "nav_token": "B-Hz-_N0YMA",
+      "village_name": "Alanganallur",
+      "village_name_ta": "அலங்காநல்லூர்"
+    },
+    {
+      "id": 5,
+      "house_no": "5-33",
+      "normalized_no": "5-33",
+      "ward_no": "1",
+      "latitude": 9.4477,
+      "longitude": 77.5619,
+      "landmark": "End of the bus stand road",
+      "confidence_tier": "HIGH",
+      "confidence_score": 80,
+      "status": "verified",
+      "nav_token": "D1H8ugtUQGs",
+      "village_name": "Alanganallur",
+      "village_name_ta": "அலங்காநல்லூர்"
+    },
+    {
+      "id": 6,
+      "house_no": "1-111",
+      "normalized_no": "1-111",
+      "ward_no": "1",
+      "latitude": 9.882287,
+      "longitude": 78.083656,
+      "landmark": "Current Location",
+      "confidence_tier": "HIGH",
+      "confidence_score": 80,
+      "status": "verified",
+      "nav_token": "sYgPpEdzoSk",
+      "village_name": "Alanganallur",
+      "village_name_ta": "அலங்காநல்லூர்"
+    },
+    {
+      "id": 7,
+      "house_no": "7-777",
+      "normalized_no": "7-777",
+      "ward_no": "1",
+      "latitude": 9.884542,
+      "longitude": 78.083975,
+      "landmark": "example ",
+      "confidence_tier": "HIGH",
+      "confidence_score": 80,
+      "status": "verified",
+      "nav_token": "R7o3WFt8Apg",
+      "village_name": "Alanganallur",
+      "village_name_ta": "அலங்காநல்லூர்"
+    },
+    {
+      "id": 8,
+      "house_no": "8-99TEST",
+      "normalized_no": "8-99TEST",
+      "ward_no": "2",
+      "latitude": 9.455,
+      "longitude": 77.56,
+      "landmark": "Test landmark near banyan tree",
+      "confidence_tier": "HIGH",
+      "confidence_score": 80,
+      "status": "verified",
+      "nav_token": "Sa0N-l0IaD0",
+      "village_name": "Alanganallur",
+      "village_name_ta": "அலங்காநல்லூர்"
+    }
+  ]
+}

@@ -13,7 +13,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
   <!-- Application Stylesheet -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="static/style.css">
 </head>
 <body>
 
@@ -34,7 +34,7 @@
     <div class="topbar-actions">
       <button class="lang-btn" id="langToggleBtn" onclick="toggleLanguage()">தமிழ் / English</button>
       <span class="role-badge" id="currentRoleBadge">Delivery Mode</span>
-      <a href="/admin" class="lang-btn" style="text-decoration:none;">⚙ Admin</a>
+      <a href="/" class="lang-btn" style="text-decoration:none;">📱 Kiosk</a>
     </div>
   </header>
 
@@ -78,13 +78,13 @@
           <div class="form-group" style="margin-bottom:8px;">
             <label for="houseInput" class="form-label" data-i18n="lblDoor">Panchayat Door / House Number:</label>
             <div class="form-row">
-              <input type="text" id="houseInput" class="input-house" placeholder="e.g. 3-82, 4-15" autocomplete="off" required>
+              <input type="text" id="houseInput" class="input-house" placeholder="Enter door / house number" autocomplete="off" required>
               <button type="submit" class="btn-search" id="searchSubmitBtn">
                 <span>🔍</span> <span data-i18n="btnFind">Find</span>
               </button>
             </div>
           </div>
-          <p class="search-hint" data-i18n="searchHint">Supports door formats: 3-82, 3/82, 03-82. Resolves directly to verified GPS coordinates.</p>
+          <p class="search-hint" data-i18n="searchHint">Resolves official Panchayat door numbers directly to verified GPS coordinates.</p>
         </form>
       </section>
 

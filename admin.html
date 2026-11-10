@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Rural Navi — Panchayat Administrator Portal</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="static/style.css">
   <style>
     .admin-container {
       max-width: 1200px;
@@ -39,7 +39,7 @@
       background: #fff;
       border: 1px solid var(--line);
       border-radius: var(--radius-md);
-      padding: 20px;
+      padding: 24px;
       margin-bottom: 24px;
       box-shadow: var(--shadow-sm);
       overflow-x: auto;
@@ -69,12 +69,58 @@
     }
     .btn-approve { background: var(--green); color: #fff; }
     .btn-reject { background: var(--red); color: #fff; }
+
+    /* ADD HOUSE FORM */
+    .add-form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin-top: 14px;
+    }
+    .form-group-admin {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .form-label-admin {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--green-deep);
+    }
+    .form-input-admin {
+      padding: 10px 12px;
+      border: 1.5px solid var(--line);
+      border-radius: var(--radius-sm);
+      font-size: 0.95rem;
+      background: var(--surface-subtle);
+      color: var(--ink);
+    }
+    .form-input-admin:focus {
+      outline: none;
+      border-color: var(--green);
+      background: #fff;
+    }
+    .btn-submit-admin {
+      background: var(--green);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 12px 20px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 3px 0 #1A3D2C;
+      transition: background 0.15s ease;
+    }
+    .btn-submit-admin:hover {
+      background: var(--green-hover);
+    }
   </style>
 </head>
 <body>
 
   <header class="topbar">
-    <a href="/" class="brand">
+    <a href="/admin" class="brand">
       <div class="brand-icon">🏛</div>
       <div>
         <div class="brand-title">Panchayat Administration Portal</div>
@@ -83,7 +129,8 @@
     </a>
     <div class="topbar-actions">
       <a href="/api/admin/export" class="lang-btn" style="text-decoration:none;">📥 Export Verified CSV</a>
-      <a href="/" class="lang-btn" style="text-decoration:none;">← Back to Map</a>
+      <a href="/classic" class="lang-btn" style="text-decoration:none;">Classic View</a>
+      <a href="/" class="lang-btn" style="text-decoration:none;">← Return to Kiosk</a>
     </div>
   </header>
 
@@ -109,7 +156,86 @@
       </div>
     </div>
 
-    <!-- PENDING FIELD CORRECTIONS & DELIVERY ISSUES -->
+    <!-- 1. ADD NEW PANCHAYAT HOUSE RECORD FORM -->
+    <div class="table-card" style="border-top: 4px solid var(--green);">
+      <h3 class="card-title" style="margin-bottom:6px;">➕ Add Official Panchayat House Record</h3>
+      <p style="font-size:0.85rem; color:var(--muted); margin-bottom:14px;">
+        Register an official surveyed house number with verified GPS coordinates. This immediately becomes searchable on the public kiosk and delivery portals.
+      </p>
+
+      <form id="addHouseForm" onsubmit="event.preventDefault(); submitNewHouse();">
+        <div class="add-form-grid">
+          <div class="form-group-admin">
+            <label class="form-label-admin">Village / Panchayat:</label>
+            <select id="newVillageSelect" class="form-input-admin" required>
+              <option value="1">Alanganallur (அலங்காநல்லூர்)</option>
+              <option value="2">Vadipatti (வாடிப்பட்டி)</option>
+              <option value="3">Palamedu (பாலமேடு)</option>
+            </select>
+          </div>
+
+          <div class="form-group-admin">
+            <label class="form-label-admin">Ward Number:</label>
+            <input type="text" id="newWardNo" class="form-input-admin" value="1" placeholder="e.g. 1" required>
+          </div>
+
+          <div class="form-group-admin">
+            <label class="form-label-admin">Panchayat House No:</label>
+            <input type="text" id="newHouseNo" class="form-input-admin" placeholder="e.g. 3-85 or 6-12" required>
+          </div>
+
+          <div class="form-group-admin">
+            <label class="form-label-admin">Latitude (WGS84):</label>
+            <input type="number" step="any" id="newLat" class="form-input-admin" placeholder="e.g. 9.4521" required>
+          </div>
+
+          <div class="form-group-admin">
+            <label class="form-label-admin">Longitude (WGS84):</label>
+            <input type="number" step="any" id="newLng" class="form-input-admin" placeholder="e.g. 77.5592" required>
+          </div>
+        </div>
+
+        <div class="form-group-admin" style="margin-top:14px;">
+          <label class="form-label-admin">Prominent Doorway Landmark / Location Note:</label>
+          <input type="text" id="newLandmark" class="form-input-admin" placeholder="e.g. Behind Primary Health Centre, Blue Gate" required>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px;">
+          <button type="button" class="lang-btn" style="color:var(--ink); border-color:var(--line);" onclick="useDeviceGPS()">
+            📍 Auto-Fill Current GPS Coordinates
+          </button>
+          <button type="submit" class="btn-submit-admin">
+            ✓ Save Official House Record
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- 2. REGISTERED HOUSE RECORDS DIRECTORY -->
+    <div class="table-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 class="card-title" style="margin:0;">Registered Panchayat Addresses</h3>
+        <span style="font-size:0.85rem; color:var(--muted);" id="houseCountBadge">Showing records</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Door No</th>
+            <th>Village / Ward</th>
+            <th>Coordinates (Lat, Lng)</th>
+            <th>Landmark Note</th>
+            <th>Confidence</th>
+            <th>Nav Token</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="housesTableBody">
+          <tr><td colspan="7" style="text-align:center;">Loading houses directory...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 3. PENDING FIELD CORRECTIONS & DELIVERY ISSUES -->
     <div class="table-card">
       <h3 class="card-title">Pending Location Reports &amp; Field Verification Queue</h3>
       <table>
@@ -129,7 +255,7 @@
       </table>
     </div>
 
-    <!-- AUDIT TRAIL LOG -->
+    <!-- 4. AUDIT TRAIL LOG -->
     <div class="table-card">
       <h3 class="card-title">System Audit Log History (Immutable Traceability)</h3>
       <table>
@@ -151,6 +277,52 @@
 
   </div>
 
+  <!-- EDIT HOUSE MODAL -->
+  <div id="editModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:9999; display:none; align-items:center; justify-content:center; padding:16px;">
+    <div style="background:var(--card-bg); max-width:540px; width:100%; border-radius:14px; box-shadow:0 12px 32px rgba(0,0,0,0.25); border:1px solid var(--line); padding:24px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--line); padding-bottom:10px;">
+        <h3 style="margin:0; color:var(--green-deep); font-size:1.2rem;">✏ Edit House Record</h3>
+        <button onclick="closeEditModal()" style="background:transparent; border:none; font-size:1.4rem; cursor:pointer; color:var(--muted);">&times;</button>
+      </div>
+
+      <form id="editHouseForm" onsubmit="saveEditHouse(event)">
+        <input type="hidden" id="editHouseId">
+        
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+          <div>
+            <label class="form-label-admin">Ward Number:</label>
+            <input type="text" id="editWardNo" class="form-input-admin" required>
+          </div>
+          <div>
+            <label class="form-label-admin">Door / House Number:</label>
+            <input type="text" id="editHouseNo" class="form-input-admin" required>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+          <div>
+            <label class="form-label-admin">Latitude:</label>
+            <input type="number" step="any" id="editLat" class="form-input-admin" required>
+          </div>
+          <div>
+            <label class="form-label-admin">Longitude:</label>
+            <input type="number" step="any" id="editLng" class="form-input-admin" required>
+          </div>
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <label class="form-label-admin">Landmark / Note:</label>
+          <input type="text" id="editLandmark" class="form-input-admin">
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button type="button" class="lang-btn" onclick="closeEditModal()" style="color:var(--ink); border-color:var(--line);">Cancel</button>
+          <button type="submit" class="btn-submit-admin" style="padding:8px 18px;">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
     async function loadAdminData() {
       try {
@@ -162,6 +334,33 @@
           document.getElementById('statVerifiedHouses').textContent = sData.stats.verified_houses;
           document.getElementById('statPendingReports').textContent = sData.stats.pending_reports;
           document.getElementById('statAuditEvents').textContent = sData.stats.total_audit_events;
+        }
+
+        // Load houses directory
+        const hRes = await fetch('/api/admin/houses');
+        const hData = await hRes.json();
+        const hTbody = document.getElementById('housesTableBody');
+        hTbody.innerHTML = '';
+        if (hData.success && hData.houses) {
+          document.getElementById('houseCountBadge').textContent = `${hData.houses.length} addresses verified`;
+          hData.houses.forEach(h => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td><strong style="color:var(--green-deep); font-size:1.05rem;">Door ${h.house_no}</strong></td>
+              <td>${h.village_name} (Ward ${h.ward_no})</td>
+              <td><code>${h.latitude.toFixed(5)}, ${h.longitude.toFixed(5)}</code></td>
+              <td>${h.landmark || '—'}</td>
+              <td><span class="confidence-pill ${h.confidence_tier.toLowerCase()}">★ ${h.confidence_tier} (${h.confidence_score}%)</span></td>
+              <td><a href="/nav/${h.nav_token}" target="_blank" style="color:var(--blue); font-size:0.8rem;"><code>${h.nav_token}</code></a></td>
+              <td>
+                <div style="display:flex; gap:6px;">
+                  <button class="btn-resolve btn-approve" style="padding:4px 8px; font-size:0.75rem;" onclick='openEditModal(${JSON.stringify(h)})'>✏ Edit</button>
+                  <button class="btn-resolve btn-reject" style="padding:4px 8px; font-size:0.75rem;" onclick="deleteHouse(${h.id}, '${h.house_no}')">✕ Del</button>
+                </div>
+              </td>
+            `;
+            hTbody.appendChild(tr);
+          });
         }
 
         // Load reports
@@ -211,7 +410,134 @@
           });
         }
       } catch (e) {
-        console.error(e);
+        console.error("Admin data load error:", e);
+      }
+    }
+
+    // SUBMIT NEW HOUSE
+    async function submitNewHouse() {
+      const villageId = parseInt(document.getElementById('newVillageSelect').value);
+      const wardNo = document.getElementById('newWardNo').value.trim();
+      const houseNo = document.getElementById('newHouseNo').value.trim();
+      const lat = parseFloat(document.getElementById('newLat').value);
+      const lng = parseFloat(document.getElementById('newLng').value);
+      const landmark = document.getElementById('newLandmark').value.trim();
+
+      if (!houseNo || isNaN(lat) || isNaN(lng)) {
+        alert("Please fill in house number, valid latitude, and longitude.");
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/admin/houses', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            village_id: villageId,
+            ward_no: wardNo,
+            house_no: houseNo,
+            latitude: lat,
+            longitude: lng,
+            landmark: landmark
+          })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          alert(`✓ House Door ${houseNo} saved successfully! It is now active on all navigation screens.`);
+          document.getElementById('addHouseForm').reset();
+          loadAdminData();
+        } else {
+          alert(`Error: ${data.error || 'Could not save house record.'}`);
+        }
+      } catch (e) {
+        alert("Network or server error while saving address.");
+      }
+    }
+
+    // AUTO-FILL CURRENT DEVICE GPS
+    function useDeviceGPS() {
+      if (!navigator.geolocation) {
+        alert("Geolocation is not supported by your browser.");
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(pos => {
+        document.getElementById('newLat').value = pos.coords.latitude.toFixed(6);
+        document.getElementById('newLng').value = pos.coords.longitude.toFixed(6);
+        alert(`Captured GPS coordinates: ${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`);
+      }, err => {
+        alert("Could not retrieve current location: " + err.message);
+      }, { enableHighAccuracy: true });
+    }
+
+    // EDIT MODAL HANDLERS
+    function openEditModal(house) {
+      document.getElementById('editHouseId').value = house.id;
+      document.getElementById('editWardNo').value = house.ward_no;
+      document.getElementById('editHouseNo').value = house.house_no;
+      document.getElementById('editLat').value = house.latitude;
+      document.getElementById('editLng').value = house.longitude;
+      document.getElementById('editLandmark').value = house.landmark || '';
+      const modal = document.getElementById('editModal');
+      modal.style.display = 'flex';
+    }
+
+    function closeEditModal() {
+      const modal = document.getElementById('editModal');
+      modal.style.display = 'none';
+    }
+
+    async function saveEditHouse(e) {
+      e.preventDefault();
+      const id = document.getElementById('editHouseId').value;
+      const wardNo = document.getElementById('editWardNo').value.trim();
+      const houseNo = document.getElementById('editHouseNo').value.trim();
+      const lat = parseFloat(document.getElementById('editLat').value);
+      const lng = parseFloat(document.getElementById('editLng').value);
+      const landmark = document.getElementById('editLandmark').value.trim();
+
+      try {
+        const res = await fetch(`/api/admin/houses/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ward_no: wardNo,
+            house_no: houseNo,
+            latitude: lat,
+            longitude: lng,
+            landmark: landmark
+          })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          alert(`✓ House Door ${houseNo} updated successfully!`);
+          closeEditModal();
+          loadAdminData();
+        } else {
+          alert(`Error: ${data.error || 'Could not update record.'}`);
+        }
+      } catch (err) {
+        alert("Network or server error while updating house.");
+      }
+    }
+
+    async function deleteHouse(id, houseNo) {
+      if (!confirm(`Are you sure you want to delete House Door ${houseNo} (ID #${id})?\nThis action will be logged in the Panchayat audit trail.`)) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/admin/houses/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+          alert(`✓ House Door ${houseNo} deleted.`);
+          loadAdminData();
+        } else {
+          alert(`Error: ${data.error || 'Could not delete house.'}`);
+        }
+      } catch (err) {
+        alert("Network error while deleting house.");
       }
     }
 
