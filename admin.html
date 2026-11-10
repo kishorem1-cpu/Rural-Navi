@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rural Navi — Panchayat Administrator Portal</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    .admin-container {
+      max-width: 1200px;
+      margin: 30px auto;
+      padding: 0 20px;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+    .stat-val {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--green-deep);
+    }
+    .stat-label {
+      font-size: 0.85rem;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .table-card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-sm);
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+    }
+    th, td {
+      padding: 12px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--line-light);
+    }
+    th {
+      background: var(--cream);
+      color: var(--green-deep);
+      font-weight: 700;
+    }
+    .btn-resolve {
+      padding: 6px 12px;
+      border-radius: 4px;
+      border: none;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    .btn-approve { background: var(--green); color: #fff; }
+    .btn-reject { background: var(--red); color: #fff; }
+  </style>
+</head>
+<body>
+
+  <header class="topbar">
+    <a href="/" class="brand">
+      <div class="brand-icon">🏛</div>
+      <div>
+        <div class="brand-title">Panchayat Administration Portal</div>
+        <div class="brand-sub">Civic Verification, Address Quality Audit &amp; Approvals</div>
+      </div>
+    </a>
+    <div class="topbar-actions">
+      <a href="/api/admin/export" class="lang-btn" style="text-decoration:none;">📥 Export Verified CSV</a>
+      <a href="/" class="lang-btn" style="text-decoration:none;">← Back to Map</a>
+    </div>
+  </header>
+
+  <div class="admin-container">
+    
+    <!-- STATS OVERVIEW -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-val" id="statTotalHouses">--</div>
+        <div class="stat-label">Total Surveyed Doors</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="statVerifiedHouses" style="color:var(--green);">--</div>
+        <div class="stat-label">Panchayat Verified</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="statPendingReports" style="color:var(--amber);">--</div>
+        <div class="stat-label">Pending Field Issues</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="statAuditEvents">--</div>
+        <div class="stat-label">Immutable Audit Logs</div>
+      </div>
+    </div>
+
+    <!-- PENDING FIELD CORRECTIONS & DELIVERY ISSUES -->
+    <div class="table-card">
+      <h3 class="card-title">Pending Location Reports &amp; Field Verification Queue</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Report ID</th>
+            <th>Door / Village</th>
+            <th>Type</th>
+            <th>Reporter Role</th>
+            <th>Description / Observation</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="reportsTableBody">
+          <tr><td colspan="6" style="text-align:center;">Loading reports...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- AUDIT TRAIL LOG -->
+    <div class="table-card">
+      <h3 class="card-title">System Audit Log History (Immutable Traceability)</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Log ID</th>
+            <th>Action</th>
+            <th>Entity Type</th>
+            <th>Details</th>
+            <th>Operator</th>
+            <th>Timestamp</th>
+          </tr>
+        </thead>
+        <tbody id="auditTableBody">
+          <tr><td colspan="6" style="text-align:center;">Loading audit trail...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <script>
+    async function loadAdminData() {
+      try {
+        // Load stats
+        const sRes = await fetch('/api/admin/stats');
+        const sData = await sRes.json();
+        if (sData.success) {
+          document.getElementById('statTotalHouses').textContent = sData.stats.total_houses;
+          document.getElementById('statVerifiedHouses').textContent = sData.stats.verified_houses;
+          document.getElementById('statPendingReports').textContent = sData.stats.pending_reports;
+          document.getElementById('statAuditEvents').textContent = sData.stats.total_audit_events;
+        }
+
+        // Load reports
+        const rRes = await fetch('/api/admin/reports');
+        const rData = await rRes.json();
+        const rTbody = document.getElementById('reportsTableBody');
+        rTbody.innerHTML = '';
+        if (rData.success && rData.reports.length > 0) {
+          rData.reports.forEach(r => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>#${r.id}</td>
+              <td><strong>Door ${r.house_no || 'Unlinked'}</strong><br><small>${r.village_name || ''}</small></td>
+              <td><span style="text-transform:capitalize;">${r.report_type.replace('_',' ')}</span></td>
+              <td><span class="role-badge" style="font-size:0.65rem;">${r.reporter_role}</span></td>
+              <td>${r.description}</td>
+              <td>
+                ${r.status === 'pending' ? `
+                  <button class="btn-resolve btn-approve" onclick="resolveReport(${r.id}, 'approve')">Approve</button>
+                  <button class="btn-resolve btn-reject" onclick="resolveReport(${r.id}, 'reject')">Reject</button>
+                ` : `<span style="font-size:0.8rem; font-weight:700; color:var(--muted);">${r.status.toUpperCase()}</span>`}
+              </td>
+            `;
+            rTbody.appendChild(tr);
+          });
+        } else {
+          rTbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--muted);">No reports currently pending review.</td></tr>';
+        }
+
+        // Load audit logs
+        const aRes = await fetch('/api/admin/audit');
+        const aData = await aRes.json();
+        const aTbody = document.getElementById('auditTableBody');
+        aTbody.innerHTML = '';
+        if (aData.success && aData.logs.length > 0) {
+          aData.logs.forEach(l => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>${l.id}</td>
+              <td><strong>${l.action}</strong></td>
+              <td>${l.entity_type}</td>
+              <td>${l.details}</td>
+              <td>${l.performed_by}</td>
+              <td><small>${l.created_at}</small></td>
+            `;
+            aTbody.appendChild(tr);
+          });
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function resolveReport(id, action) {
+      if (!confirm(`Are you sure you want to ${action} Report #${id}?`)) return;
+      try {
+        const res = await fetch(`/api/admin/reports/${id}/resolve`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: action, notes: 'Reviewed via Panchayat Administrator portal.' })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(data.message);
+          loadAdminData();
+        }
+      } catch (e) {
+        alert("Action could not be completed.");
+      }
+    }
+
+    loadAdminData();
+  </script>
+</body>
+</html>

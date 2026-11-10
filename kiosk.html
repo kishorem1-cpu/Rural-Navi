@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rural Navi — Public Touchscreen Kiosk</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    :root {
+      --bg: #F5F3EC;
+      --card-bg: #FFFFFF;
+      --green: #2B5C43;
+      --green-deep: #1A3D2C;
+      --gold: #C28E28;
+      --ink: #1C2826;
+      --line: #D9D3C7;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', -apple-system, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+    }
+    header {
+      background: var(--green-deep);
+      color: #fff;
+      padding: 24px;
+      text-align: center;
+      border-bottom: 5px solid var(--gold);
+    }
+    header h1 { font-size: 2.2rem; font-weight: 800; }
+    header p { font-size: 1.15rem; color: #BED8C7; margin-top: 6px; }
+
+    main {
+      flex: 1;
+      max-width: 800px;
+      width: 100%;
+      margin: 24px auto;
+      padding: 0 20px;
+    }
+
+    .kiosk-card {
+      background: var(--card-bg);
+      border: 2px solid var(--line);
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+    }
+
+    .kiosk-input-display {
+      background: #FDFBF7;
+      border: 3px solid var(--green);
+      border-radius: 12px;
+      padding: 20px;
+      font-size: 2.8rem;
+      font-weight: 800;
+      text-align: center;
+      letter-spacing: 4px;
+      color: var(--green-deep);
+      min-height: 84px;
+      margin-bottom: 24px;
+    }
+
+    .keypad-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .key-btn {
+      background: #EAE6DC;
+      color: var(--ink);
+      border: none;
+      border-radius: 12px;
+      padding: 22px;
+      font-size: 2.2rem;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #CCC5B6;
+      transition: all 0.1s ease;
+    }
+    .key-btn:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #CCC5B6;
+    }
+    .key-btn.action {
+      background: var(--green);
+      color: #fff;
+      box-shadow: 0 4px 0 #1A3D2C;
+    }
+    .key-btn.clear {
+      background: #C45143;
+      color: #fff;
+      box-shadow: 0 4px 0 #8C3227;
+    }
+
+    .result-box {
+      margin-top: 24px;
+      background: #E7F0EB;
+      border: 2px solid #B8DAC6;
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      display: none;
+    }
+
+    .auto-reset-banner {
+      margin-top: 16px;
+      text-align: center;
+      font-size: 0.95rem;
+      color: #657470;
+    }
+
+    .nav-links {
+      text-align: center;
+      margin-top: 20px;
+    }
+    .nav-links a {
+      color: var(--green);
+      font-weight: 700;
+      text-decoration: none;
+      font-size: 1.1rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>கிராம முகவரி வழிகாட்டி மையம்</h1>
+    <p>Panchayat Citizen &amp; Visitor Touchscreen Kiosk</p>
+  </header>
+
+  <main>
+    <div class="kiosk-card">
+      <div style="font-size: 1.2rem; font-weight: 700; margin-bottom: 12px; text-align: center; color: var(--green);">
+        Enter Door Number / கதவு எண்ணை அழுத்தவும்:
+      </div>
+
+      <div class="kiosk-input-display" id="kioskDisplay">--</div>
+
+      <div class="keypad-grid">
+        <button class="key-btn" onclick="pressKey('1')">1</button>
+        <button class="key-btn" onclick="pressKey('2')">2</button>
+        <button class="key-btn" onclick="pressKey('3')">3</button>
+        <button class="key-btn" onclick="pressKey('4')">4</button>
+        <button class="key-btn" onclick="pressKey('5')">5</button>
+        <button class="key-btn" onclick="pressKey('6')">6</button>
+        <button class="key-btn" onclick="pressKey('7')">7</button>
+        <button class="key-btn" onclick="pressKey('8')">8</button>
+        <button class="key-btn" onclick="pressKey('9')">9</button>
+        <button class="key-btn clear" onclick="clearKeys()">Clear</button>
+        <button class="key-btn" onclick="pressKey('0')">0</button>
+        <button class="key-btn" onclick="pressKey('-')">-</button>
+      </div>
+
+      <button class="key-btn action" style="width:100%; font-size:1.8rem;" onclick="searchKiosk()">
+        🔍 முகவரியை காண்க (Search Address)
+      </button>
+
+      <div class="result-box" id="kioskResultBox">
+        <h2 style="font-size:2rem; color:var(--green-deep); margin-bottom:8px;" id="kioskResultHouse">Door 3-82</h2>
+        <p style="font-size:1.25rem; font-weight:600; margin-bottom:12px;" id="kioskResultLandmark">அடையாளம்: குடிநீர் தொட்டி எதிரில்</p>
+        <div id="kioskQrCanvas" style="display:inline-block; padding:12px; background:#fff; border-radius:8px; margin: 12px 0;"></div>
+        <p style="font-size:1.05rem; color:#1A3D2C;">Scan this QR on your phone camera for turn-by-turn navigation</p>
+      </div>
+
+      <p class="auto-reset-banner">
+        🔒 Privacy Protection: This kiosk automatically resets and wipes previous search queries every 60 seconds.
+      </p>
+
+      <div class="nav-links">
+        <a href="/">← Return to Standard Map Navigation</a>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let currentInput = '';
+    let resetTimer = null;
+
+    function pressKey(k) {
+      if (currentInput.length < 8) {
+        currentInput += k;
+        updateDisplay();
+      }
+      resetInactivityTimer();
+    }
+
+    function clearKeys() {
+      currentInput = '';
+      updateDisplay();
+      document.getElementById('kioskResultBox').style.display = 'none';
+      resetInactivityTimer();
+    }
+
+    function updateDisplay() {
+      document.getElementById('kioskDisplay').textContent = currentInput || '--';
+    }
+
+    async function searchKiosk() {
+      if (!currentInput) return;
+      resetInactivityTimer();
+
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(currentInput)}`);
+        const data = await res.json();
+        const box = document.getElementById('kioskResultBox');
+
+        if (data.success && data.count > 0) {
+          const item = data.results[0];
+          document.getElementById('kioskResultHouse').textContent = `Door ${item.house_no} (${item.village_name})`;
+          document.getElementById('kioskResultLandmark').textContent = `Landmark / அடையாளம்: ${item.landmark}`;
+
+          const qrCanvas = document.getElementById('kioskQrCanvas');
+          qrCanvas.innerHTML = '';
+          const dynamicUrl = `${window.location.origin}/nav/${item.nav_token}`;
+          new QRCode(qrCanvas, {
+            text: dynamicUrl,
+            width: 160,
+            height: 160,
+            colorDark: "#1A3D2C",
+            colorLight: "#FFFFFF"
+          });
+
+          box.style.display = 'block';
+        } else {
+          document.getElementById('kioskResultHouse').textContent = `முகவரி கிடைக்கவில்லை (Not Found)`;
+          document.getElementById('kioskResultLandmark').textContent = `Door ${currentInput} is not verified in Panchayat records yet.`;
+          document.getElementById('kioskQrCanvas').innerHTML = '';
+          box.style.display = 'block';
+        }
+      } catch (e) {
+        alert("Server communication error.");
+      }
+    }
+
+    function resetInactivityTimer() {
+      if (resetTimer) clearTimeout(resetTimer);
+      resetTimer = setTimeout(() => {
+        clearKeys();
+      }, 60000); // 60 seconds privacy auto-clear
+    }
+
+    resetInactivityTimer();
+  </script>
+</body>
+</html>
